@@ -20,7 +20,7 @@ jobs:
       run: |
         JOBS=$(git diff --name-only ${{ github.event.before }} ${{ github.event.after }} | grep '^jobs' | cut -d'/' -f1 | sort -u | jq -R -s -c 'split("\n")[:-1]')
         echo "JOBS=$JOBS"
-        echo "::set-output name=matrix::{\"include\":$(echo $FOLDERS | jq '. | map({jobs: .})')}"
+        echo "::set-output name=matrix::{\"include\":$(echo $JOBS | jq '. | map({jobs: .})')}"
 
   create-repositories:
       needs: setup-matrix
