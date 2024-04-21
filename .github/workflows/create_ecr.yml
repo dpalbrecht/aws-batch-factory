@@ -1,0 +1,55 @@
+name: Dynamic ECR Repository Creation
+
+
+on:
+  push:
+    paths:
+      - 'jobs*/**'
+
+
+jobs:
+  setup-matrix:
+    runs-on: ubuntu-latest
+    outputs:
+      matrix: ${{ steps.set-matrix.outputs.matrix }}
+    steps:
+    - uses: actions/checkout@v3
+
+    - id: set-matrix
+      name: Set matrix for changed folders
+      run: |
+        JOBS=$(git diff --name-only ${{ github.event.before }} ${{ github.event.after }} | grep '^jobs' | cut -d'/' -f1 | sort -u | jq -R -s -c 'split("\n")[:-1]')
+        echo "JOBS=$JOBS"
+        echo "::set-output name=matrix::{\"include\":$(echo $FOLDERS | jq '. | map({jobs: .})')}"
+
+  create-repositories:
+      needs: setup-matrix
+      runs-on: ubuntu-latest
+      strategy:
+        matrix: ${{fromJson(needs.setup-matrix.outputs.matrix)}}
+      steps:
+      - uses: actions/checkout@v3
+
+
+      - name: Print job name
+        run: |
+          CONFIG_FILE="${{ matrix.folder }}/.config"
+          JOB_NAME=$(grep 'JOB_NAME' $CONFIG_FILE | cut -d '=' -f2 | tr -d '[:space:]')
+          echo $JOB_NAME
+    #   - name: Setup AWS CLI
+    #     uses: aws-actions/configure-aws-credentials@v1
+    #     with:
+    #         aws-access-key-id: ${{ secrets.AWS_ACCESS_KEY_ID }}
+    #         aws-secret-access-key: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
+    #         aws-region: us-east-1
+
+    #   - name: Install JQ
+    #     run: sudo apt-get install jq -y
+
+    #   - name: Create or Update ECR repository
+    #     run: |
+    #         CONFIG_FILE="${{ matrix.folder }}/.config"
+    #         JOB_NAME=$(grep 'JOB_NAME' $CONFIG_FILE | cut -d '=' -f2 | tr -d '[:space:]')
+    #         aws ecr describe-repositories --repository-names $JOB_NAME 2>/dev/null || aws ecr create-repository --repository-name $JOB_NAME
+    #         env:
+    #         AWS_DEFAULT_REGION: us-east-1
