@@ -18,7 +18,8 @@ jobs:
     - id: set-matrix
       name: Set matrix for changed folders
       run: |
-        FOLDERS=$(git diff --name-only ${{ github.event.before }} ${{ github.event.after }} | grep '^jobs/' | cut -d'/' -f1-2 | sort -u)
+        # Detect all folders under 'jobs/' that have changed. This can include changes to any files within these folders.
+        FOLDERS=$(git diff --name-only ${{ github.event.before }} ${{ github.event.after }} | grep '^jobs/' | cut -d'/' -f1-2 | uniq)
         if [ -z "$FOLDERS" ]; then
           echo "No folders found, setting dummy value."
           FOLDERS="jobs/dummy"
