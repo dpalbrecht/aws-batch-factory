@@ -20,6 +20,7 @@ jobs:
       run: |
         # Detect all folders under 'jobs/' that have changed. This can include changes to any files within these folders.
         FOLDERS=$(git diff --name-only ${{ github.event.before }} ${{ github.event.after }} | grep '^jobs/' | cut -d'/' -f1-2 | uniq)
+        echo FOLDERS
         if [ -z "$FOLDERS" ]; then
           echo "No folders found, setting dummy value."
           FOLDERS="jobs/dummy"
