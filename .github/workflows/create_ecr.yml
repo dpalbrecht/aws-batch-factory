@@ -18,9 +18,14 @@ jobs:
     - id: set-matrix
       name: Set matrix for changed folders
       run: |
-        FOLDERS=$(git diff --name-only ${{ github.event.before }} ${{ github.event.after }} | grep '^jobs' | cut -d'/' -f1 | sort -u | jq -R -s -c 'split("\n")[:-1]')
-        echo "FOLDERS=$FOLDERS"
-        echo "::set-output name=matrix::{\"include\":$(echo $FOLDERS | jq '. | map({folder: .})')}"
+        FOLDERS=$(git diff --name-only ${{ github.event.before }} ${{ github.event.after }} | grep '^jobs/' | cut -d'/' -f1-2 | sort -u)
+        if [ -z "$FOLDERS" ]; then
+          echo "No folders found, setting dummy value."
+          FOLDERS="jobs/dummy"
+        fi
+        MATRIX_JSON=$(echo $FOLDERS | jq -R -s -c 'split("\n")[:-1] | map({folder: .})')
+        echo "MATRIX_JSON=$MATRIX_JSON"
+        echo "::set-output name=matrix::{\"include\":$MATRIX_JSON}"
 
   create-repositories:
       needs: setup-matrix
@@ -34,8 +39,12 @@ jobs:
       - name: Print job name
         run: |
           CONFIG_FILE="${{ matrix.folder }}/.config"
-          JOB_NAME=$(grep 'JOB_NAME' $CONFIG_FILE | cut -d '=' -f2 | tr -d '[:space:]')
-          echo $JOB_NAME
+          if [ -f "$CONFIG_FILE" ]; then
+            JOB_NAME=$(grep 'JOB_NAME' $CONFIG_FILE | cut -d '=' -f2 | tr -d '[:space:]')
+            echo $JOB_NAME
+          else
+            echo "Skipping, no config found for ${{ matrix.folder }}"
+          fi
     #   - name: Setup AWS CLI
     #     uses: aws-actions/configure-aws-credentials@v1
     #     with:
@@ -48,8 +57,10 @@ jobs:
 
     #   - name: Create or Update ECR repository
     #     run: |
-    #         CONFIG_FILE="${{ matrix.folder }}/.config"
+    #       CONFIG_FILE="${{ matrix.folder }}/.config"
+    #       if [ -f "$CONFIG_FILE" ]; then
     #         JOB_NAME=$(grep 'JOB_NAME' $CONFIG_FILE | cut -d '=' -f2 | tr -d '[:space:]')
     #         aws ecr describe-repositories --repository-names $JOB_NAME 2>/dev/null || aws ecr create-repository --repository-name $JOB_NAME
-    #         env:
-    #         AWS_DEFAULT_REGION: us-east-1
+    #       else
+    #         echo "Skipping, no config found for ${{ matrix.folder }}"
+    #       fi
