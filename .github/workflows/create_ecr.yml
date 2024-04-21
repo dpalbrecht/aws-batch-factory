@@ -4,7 +4,7 @@ name: Dynamic ECR Repository Creation
 on:
   push:
     paths:
-      - 'jobs*/**'
+      - 'jobs/**'
 
 
 jobs:
@@ -18,9 +18,9 @@ jobs:
     - id: set-matrix
       name: Set matrix for changed folders
       run: |
-        JOBS=$(git diff --name-only ${{ github.event.before }} ${{ github.event.after }} | grep '^jobs' | cut -d'/' -f1 | sort -u | jq -R -s -c 'split("\n")[:-1]')
-        echo "JOBS=$JOBS"
-        echo "::set-output name=matrix::{\"include\":$(echo $JOBS | jq '. | map({jobs: .})')}"
+        FOLDERS=$(git diff --name-only ${{ github.event.before }} ${{ github.event.after }} | grep '^jobs' | cut -d'/' -f1 | sort -u | jq -R -s -c 'split("\n")[:-1]')
+        echo "FOLDERS=$FOLDERS"
+        echo "::set-output name=matrix::{\"include\":$(echo $FOLDERS | jq '. | map({folder: .})')}"
 
   create-repositories:
       needs: setup-matrix
