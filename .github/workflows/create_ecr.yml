@@ -12,11 +12,26 @@ jobs:
     runs-on: ubuntu-latest
     steps:
     - uses: actions/checkout@v3
+      with:
+        fetch-depth: 0  # Ensure all history is fetched for comprehensive diff
 
     - name: Detect changed directories in jobs/
       run: |
-        # Find all unique directories under 'jobs/' that have changed
-        CHANGED_DIRS=$(git diff --name-only ${{ github.event.before }} ${{ github.event.after }} | grep '^jobs/' | sed 's|/[^/]*$||' | uniq)
+        # Use GitHub Actions' environment variables to get commit SHAs
+        BEFORE_COMMIT=${{ github.event.before }}
+        AFTER_COMMIT=${{ github.event.after }}
+
+        # Check if commits are valid, fall back to HEAD if not
+        if ! git rev-parse --quiet --verify $BEFORE_COMMIT >/dev/null; then
+          BEFORE_COMMIT=HEAD^
+        fi
+
+        if ! git rev-parse --quiet --verify $AFTER_COMMIT >/dev/null; then
+          AFTER_COMMIT=HEAD
+        fi
+
+        # Perform diff and extract directories
+        CHANGED_DIRS=$(git diff --name-only $BEFORE_COMMIT $AFTER_COMMIT | grep '^jobs/' | sed 's|/[^/]*$||' | uniq)
         echo "Changed directories:"
         echo "$CHANGED_DIRS"
         
