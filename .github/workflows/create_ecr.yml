@@ -15,12 +15,24 @@ jobs:
       # with:
       #   fetch-depth: 0
 
-    - name: Detect changed directories in jobs/
+    - name: Fetch all changes in the push
       run: |
-        # List changed directories and remove duplicates
-        CHANGED_DIRS=$(git diff --name-only HEAD^ HEAD | grep '^jobs/' | sed 's|/[^/]*$||' | uniq)
-        echo "Changed directories:"
-        echo "$CHANGED_DIRS"
+        # Fetching all changes including the latest push
+        git fetch origin ${GITHUB_REF} --depth=1
+
+        # List files changed in the last push using GitHub's native git capabilities
+        # This uses the built-in GITHUB environment variables to get the range of commits pushed
+        CHANGED_FILES=$(git diff --name-only HEAD ${GITHUB_SHA}^1)
+        echo "Files changed in this push:"
+        echo "${CHANGED_FILES}"
+
+        # Extract directories from changed files, focusing on 'jobs/' subdirectories
+        CHANGED_DIRS=$(echo "${CHANGED_FILES}" | grep '^jobs/' | sed 's|/[^/]*$||' | sort -u)
+        echo "Changed directories in 'jobs/':"
+        echo "${CHANGED_DIRS}"
+
+        # Output the changed directories for use in other steps or debugging
+        echo "::set-output name=changed_dirs::$CHANGED_DIRS"
         
       
 # # Find all unique directories under 'jobs/' that have changed
